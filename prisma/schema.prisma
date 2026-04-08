@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  hashedPassword String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  goals          Goal[]
+  goalSections   GoalSection[]
+  journalEntries JournalEntry[]
+  dailyLogs      DailyLog[]
+  templates      Template[]
+}
+
+model GoalSection {
+  id          String   @id @default(cuid())
+  name        String
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  goals       Goal[]
+}
+
+model Goal {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  frequency    String   @default("daily") // daily, weekly, monthly
+  reminderTime String?  // HH:mm format
+  nudgeConfig  String?  // JSON: { type: "daily" | "days" | "interval", days?: number[], interval?: number }
+  currentStreak Int     @default(0)
+  bestStreak    Int     @default(0)
+  isActive     Boolean  @default(true)
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sectionId   String?
+  section     GoalSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  completions GoalCompletion[]
+}
+
+model GoalCompletion {
+  id        String   @id @default(cuid())
+  date      String   // YYYY-MM-DD format
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  goalId    String
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  dailyLogId String?
+  dailyLog   DailyLog? @relation(fields: [dailyLogId], references: [id])
+
+  @@unique([goalId, date])
+}
+
+model JournalEntry {
+  id        String   @id @default(cuid())
+  date      String   // YYYY-MM-DD format
+  prompt    String
+  response  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyLog {
+  id        String   @id @default(cuid())
+  date      String   // YYYY-MM-DD format
+  score     Float?   // 0-100 percentage
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  completions GoalCompletion[]
+
+  @@unique([userId, date])
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  goals       String   // JSON array of goal titles
+  frequency   String   @default("daily") // daily, weekly, monthly
+  isBuiltIn   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
