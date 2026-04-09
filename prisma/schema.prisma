@@ -54,8 +54,9 @@ model Goal {
   title        String
   description  String?
   frequency    String   @default("daily") // daily, weekly, monthly
-  reminderTime String?  // HH:mm format
+  reminderTimes String? // JSON array of HH:mm times, e.g. ["08:00","18:00"]
   nudgeConfig  String?  // JSON: { type: "daily" | "days" | "interval", days?: number[], interval?: number }
+  nudgeMessage String?  // Custom notification message
   currentStreak Int     @default(0)
   bestStreak    Int     @default(0)
   isActive     Boolean  @default(true)
