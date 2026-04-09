@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import AuthGuard from "@/components/AuthGuard";
+import NotificationPrompt from "@/components/NotificationPrompt";
 
 const navItems = [
   { href: "/dashboard", label: "Today", icon: "\u2600\uFE0F" },
@@ -41,6 +42,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
         ))}
       </nav>
+      <NotificationPrompt />
     </div>
     </AuthGuard>
   );
