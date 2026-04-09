@@ -110,19 +110,3 @@ export default function NotificationPrompt() {
     </div>
   );
 }
-              className="px-3 py-1.5 bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent/90"
-            >
-              Enable
-            </button>
-            <button
-              onClick={() => setShow(false)}
-              className="px-3 py-1.5 text-muted text-xs hover:text-foreground"
-            >
-              Not now
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
