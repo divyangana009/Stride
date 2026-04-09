@@ -26,22 +26,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <button onClick={() => signOut({ callbackUrl: "/" })} className="text-sm text-muted hover:text-foreground transition-colors">Sign Out</button>
       </header>
       <div className="flex flex-1">
-        <nav className="w-48 border-r border-border p-4 space-y-1 hidden md:block bg-card">
+        <nav className="w-48 border-r border-border p-4 space-y-1 bg-card shrink-0">
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${pathname === item.href ? "bg-accent/10 text-accent font-medium" : "text-muted hover:text-foreground hover:bg-background"}`}>
               <span>{item.icon}</span>{item.label}
             </Link>
           ))}
         </nav>
-        <main className="flex-1 p-6 max-w-4xl">{children}</main>
+        <main className="flex-1 p-6 max-w-4xl overflow-auto">{children}</main>
       </div>
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border flex justify-around py-2 z-50">
-        {navItems.map((item) => (
-          <Link key={item.href} href={item.href} className={`flex flex-col items-center text-xs ${pathname === item.href ? "text-accent" : "text-muted"}`}>
-            <span className="text-lg">{item.icon}</span>{item.label}
-          </Link>
-        ))}
-      </nav>
       <NotificationPrompt />
     </div>
     </AuthGuard>
