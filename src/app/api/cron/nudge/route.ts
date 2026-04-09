@@ -8,6 +8,7 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY!
 );
 
+// Called every 5 min by cron-job.org — sends nudges for goals matching current time window
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && process.env.NODE_ENV === "production") {
@@ -15,52 +16,70 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date();
+  const currentHour = String(now.getUTCHours()).padStart(2, "0");
+  const currentMin = now.getUTCMinutes();
+  // Match times within a 5-min window (e.g., 08:00-08:04 all match 08:00)
+  const roundedMin = String(Math.floor(currentMin / 5) * 5).padStart(2, "0");
+  const timeWindow = [`${currentHour}:${roundedMin}`];
+  // Also check the exact minute slots in this 5-min window
+  for (let m = 0; m < 5; m++) {
+    const mm = String(Math.floor(currentMin / 5) * 5 + m).padStart(2, "0");
+    if (!timeWindow.includes(`${currentHour}:${mm}`)) timeWindow.push(`${currentHour}:${mm}`);
+  }
+
   const currentDay = now.getDay();
   const today = now.toISOString().split("T")[0];
 
   const goals = await prisma.goal.findMany({
-    where: { isActive: true, reminderTime: { not: null } },
+    where: { isActive: true, reminderTime: { in: timeWindow } },
     include: { user: { include: { pushSubscriptions: true } } },
   });
 
-  const userGoals = new Map<string, { goals: string[]; subs: typeof goals[0]["user"]["pushSubscriptions"] }>();
+  let sent = 0;
+  let skipped = 0;
 
   for (const goal of goals) {
     const config = goal.nudgeConfig ? JSON.parse(goal.nudgeConfig) : { type: "daily" };
     let shouldNudge = false;
+
     if (config.type === "daily") shouldNudge = true;
     else if (config.type === "days" && Array.isArray(config.days)) shouldNudge = config.days.includes(currentDay);
     else if (config.type === "interval" && config.interval) {
       const diffDays = Math.floor((now.getTime() - new Date(goal.createdAt).getTime()) / 86400000);
       shouldNudge = diffDays % config.interval === 0;
     }
-    if (!shouldNudge) continue;
 
-    const completion = await prisma.goalCompletion.findUnique({ where: { goalId_date: { goalId: goal.id, date: today } } });
-    if (completion?.completed) continue;
+    if (!shouldNudge) { skipped++; continue; }
 
-    const existing = userGoals.get(goal.userId);
-    if (existing) existing.goals.push(goal.title);
-    else userGoals.set(goal.userId, { goals: [goal.title], subs: goal.user.pushSubscriptions });
-  }
+    // Skip if already completed today
+    const completion = await prisma.goalCompletion.findUnique({
+      where: { goalId_date: { goalId: goal.id, date: today } },
+    });
+    if (completion?.completed) { skipped++; continue; }
 
-  let sent = 0;
-  for (const [, { goals: titles, subs }] of userGoals) {
-    const count = titles.length;
-    const preview = titles.slice(0, 3).join(", ");
-    const body = count <= 3 ? preview : `${preview} +${count - 3} more`;
-    const payload = JSON.stringify({ title: `Stride: ${count} goals for today`, body, tag: "stride-daily", url: "/dashboard" });
+    // Send push notification
+    for (const sub of goal.user.pushSubscriptions) {
+      const payload = JSON.stringify({
+        title: "Stride Nudge",
+        body: `Time for: "${goal.title}"`,
+        tag: `nudge-${goal.id}`,
+        url: "/dashboard",
+      });
 
-    for (const sub of subs) {
       try {
-        await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload);
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        );
         sent++;
       } catch (err: unknown) {
         const sc = (err as { statusCode?: number }).statusCode;
-        if (sc === 404 || sc === 410) await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+        if (sc === 404 || sc === 410) {
+          await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+        }
       }
     }
   }
 
-  return NextResponse.json({ sent, usersNotified: userGoals.size, date: today });
+  return NextResponse.json({ sent, skipped, timeWindow, goalsMatched: goals.length, date: today });
 }
