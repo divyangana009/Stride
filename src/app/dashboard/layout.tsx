@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import AuthGuard from "@/components/AuthGuard";
 
 const navItems = [
   { href: "/dashboard", label: "Today", icon: "\u2600\uFE0F" },
@@ -17,6 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
 
   return (
+    <AuthGuard>
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-border px-6 py-3 flex items-center justify-between bg-card">
         <Link href="/dashboard" className="text-xl font-bold text-accent">Stride</Link>
@@ -40,5 +42,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ))}
       </nav>
     </div>
+    </AuthGuard>
   );
 }
