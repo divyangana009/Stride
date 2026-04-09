@@ -16,19 +16,20 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date();
-  const currentHour = String(now.getUTCHours()).padStart(2, "0");
-  const currentMin = now.getUTCMinutes();
-  // Match times within a 5-min window (e.g., 08:00-08:04 all match 08:00)
-  const roundedMin = String(Math.floor(currentMin / 5) * 5).padStart(2, "0");
-  const timeWindow = [`${currentHour}:${roundedMin}`];
-  // Also check the exact minute slots in this 5-min window
+  // Convert to IST (UTC+5:30) — users enter times in IST
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(now.getTime() + istOffset);
+  const currentHour = String(ist.getUTCHours()).padStart(2, "0");
+  const currentMin = ist.getUTCMinutes();
+  // Match times within a 5-min window
+  const timeWindow: string[] = [];
   for (let m = 0; m < 5; m++) {
-    const mm = String(Math.floor(currentMin / 5) * 5 + m).padStart(2, "0");
-    if (!timeWindow.includes(`${currentHour}:${mm}`)) timeWindow.push(`${currentHour}:${mm}`);
+    const mm = Math.floor(currentMin / 5) * 5 + m;
+    if (mm < 60) timeWindow.push(`${currentHour}:${String(mm).padStart(2, "0")}`);
   }
 
-  const currentDay = now.getDay();
-  const today = now.toISOString().split("T")[0];
+  const currentDay = ist.getUTCDay();
+  const today = ist.toISOString().split("T")[0];
 
   const goals = await prisma.goal.findMany({
     where: { isActive: true, reminderTime: { in: timeWindow } },
