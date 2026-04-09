@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ServiceWorkerRegistration from "@/components/ServiceWorker";
@@ -13,17 +13,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#8b5cf6",
+};
+
 export const metadata: Metadata = {
   title: "Stride - Daily Habit Tracker & Journal",
   description: "Track your daily goals, journal your thoughts, and build better habits.",
   manifest: "/manifest.json",
-  themeColor: "#8b5cf6",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Stride",
   },
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
 };
 
 export default function RootLayout({
