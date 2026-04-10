@@ -20,7 +20,9 @@ export async function GET(req: NextRequest) {
   });
 
   function mapGoal(g: any) {
-    return { id: g.id, title: g.title, frequency: g.frequency, completed: g.completions?.[0]?.completed ?? false, currentStreak: g.currentStreak, reminderTimes: g.reminderTimes ? JSON.parse(g.reminderTimes) : [] };
+    let rt: string[] = [];
+    if (g.reminderTimes) { try { const p = JSON.parse(g.reminderTimes); rt = Array.isArray(p) ? p : [g.reminderTimes]; } catch { rt = [g.reminderTimes]; } }
+    return { id: g.id, title: g.title, frequency: g.frequency, completed: g.completions?.[0]?.completed ?? false, currentStreak: g.currentStreak, reminderTimes: rt };
   }
   function calcScore(goals: any[]) {
     const t = goals.length, c = goals.filter(g => g.completions?.[0]?.completed).length;

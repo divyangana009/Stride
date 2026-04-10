@@ -3,10 +3,20 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 function parseGoal(g: any) {
+  let reminderTimes: string[] = [];
+  if (g.reminderTimes) {
+    try {
+      const parsed = JSON.parse(g.reminderTimes);
+      reminderTimes = Array.isArray(parsed) ? parsed : [g.reminderTimes];
+    } catch {
+      // Old format: single time string like "22:55"
+      reminderTimes = [g.reminderTimes];
+    }
+  }
   return {
     ...g,
-    reminderTimes: g.reminderTimes ? JSON.parse(g.reminderTimes) : [],
-    nudgeConfig: g.nudgeConfig ? JSON.parse(g.nudgeConfig) : null,
+    reminderTimes,
+    nudgeConfig: g.nudgeConfig ? (() => { try { return JSON.parse(g.nudgeConfig); } catch { return null; } })() : null,
   };
 }
 

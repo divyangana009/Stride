@@ -35,13 +35,15 @@ export async function GET(req: NextRequest) {
   let sent = 0, skipped = 0;
 
   for (const goal of goals) {
-    // Parse reminder times array and check if any match current window
-    const times: string[] = goal.reminderTimes ? JSON.parse(goal.reminderTimes) : [];
+    // Parse reminder times array (handle old single-string format too)
+    let times: string[] = [];
+    if (goal.reminderTimes) { try { const p = JSON.parse(goal.reminderTimes); times = Array.isArray(p) ? p : [goal.reminderTimes]; } catch { times = [goal.reminderTimes]; } }
     const hasMatchingTime = times.some(t => timeWindow.includes(t));
     if (!hasMatchingTime) continue;
 
     // Check nudge schedule (daily/days/interval)
-    const config = goal.nudgeConfig ? JSON.parse(goal.nudgeConfig) : { type: "daily" };
+    let config = { type: "daily" } as any;
+    if (goal.nudgeConfig) { try { config = JSON.parse(goal.nudgeConfig); } catch {} }
     let shouldNudge = false;
     if (config.type === "daily") shouldNudge = true;
     else if (config.type === "days" && Array.isArray(config.days)) shouldNudge = config.days.includes(currentDay);
